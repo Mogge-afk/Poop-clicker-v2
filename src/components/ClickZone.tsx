@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { fmt, fmtPps } from '../utils/calc';
 import { soundManager } from '../utils/audio';
-import { Flame, Star, Zap } from 'lucide-react';
+import { Flame, Star, Zap, Trophy, Sparkles } from 'lucide-react';
 import { SkinGraphic } from './SkinGraphic';
+import { Language, TRANSLATIONS } from '../utils/i18n';
 
 interface FloatingNumber {
   id: number;
@@ -12,15 +13,9 @@ interface FloatingNumber {
   isCrit?: boolean;
 }
 
-interface SplashPoop {
-  id: number;
-  left: number;
-  top: number;
-  size: number;
-}
-
 interface ClickZoneProps {
   score: number;
+  totalClicks: number;
   pps: number;
   clickGain: number;
   prestigeMult: number;
@@ -34,16 +29,23 @@ interface ClickZoneProps {
   cheatActive: boolean;
   hotSauceBought?: boolean;
   plungerBought?: boolean;
+  language?: Language;
+  onMeterBonus?: (bonusPoints: number) => void;
 }
+
+// Milestone targets for Poop-o-Meter
+const CLICK_MILESTONES = [
+  50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 25000, 50000,
+];
 
 export const ClickZone: React.FC<ClickZoneProps> = ({
   score,
+  totalClicks,
   pps,
   clickGain,
   prestigeMult,
   prestigeLevel,
   activeSkinId,
-  activeSkinEmoji,
   frenzyActive,
   frenzySecondsLeft,
   onManualClick,
@@ -51,17 +53,61 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
   cheatActive,
   hotSauceBought = false,
   plungerBought = false,
+  language = 'sv',
+  onMeterBonus,
 }) => {
+  const t = TRANSLATIONS[language];
   const [floatingTexts, setFloatingTexts] = useState<FloatingNumber[]>([]);
   const [isPressing, setIsPressing] = useState(false);
   const clickTimesRef = useRef<number[]>([]);
   const floatIdRef = useRef(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Poop-o-Meter Calculation
+  const { currentMilestone, prevMilestone, progressPct, clicksLeft } = useMemo(() => {
+    let target = CLICK_MILESTONES[CLICK_MILESTONES.length - 1];
+    let prev = 0;
+
+    for (let i = 0; i < CLICK_MILESTONES.length; i++) {
+      if (totalClicks < CLICK_MILESTONES[i]) {
+        target = CLICK_MILESTONES[i];
+        prev = i > 0 ? CLICK_MILESTONES[i - 1] : 0;
+        break;
+      }
+    }
+
+    const range = Math.max(1, target - prev);
+    const progress = Math.min(100, Math.max(0, ((totalClicks - prev) / range) * 100));
+    const left = Math.max(0, target - totalClicks);
+
+    return {
+      currentMilestone: target,
+      prevMilestone: prev,
+      progressPct: progress,
+      clicksLeft: left,
+    };
+  }, [totalClicks]);
+
+  // Track milestone completion celebrations
+  const lastReachedRef = useRef<number>(0);
+  useEffect(() => {
+    // Check if player just reached or passed a milestone
+    CLICK_MILESTONES.forEach(m => {
+      if (totalClicks >= m && lastReachedRef.current < m) {
+        lastReachedRef.current = m;
+        soundManager.playMilestone();
+        // Give milestone bonus: e.g. 5x clickGain or 15s of PPS
+        const bonus = Math.max(clickGain * 15, pps * 10, 250);
+        if (onMeterBonus) {
+          onMeterBonus(bonus);
+        }
+      }
+    });
+  }, [totalClicks, clickGain, pps, onMeterBonus]);
+
   // Keyboard shortcut: Spacebar to click
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.code === 'Space') {
         e.preventDefault();
@@ -69,8 +115,7 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
         setIsPressing(true);
         const res = onManualClick(e);
         soundManager.playClick();
-        
-        // spawn float number near center
+
         if (buttonRef.current) {
           const rect = buttonRef.current.getBoundingClientRect();
           spawnFloatingText(
@@ -132,13 +177,13 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-col items-center py-4 select-none relative">
+    <div className="w-full flex flex-col items-center py-3 select-none relative">
       {/* Frenzy Indicator Banner */}
       {frenzyActive && (
         <div className="w-full max-w-sm mb-3 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#853e0d] via-[#b86111] to-[#853e0d] border border-[#e29e34] shadow-lg flex items-center justify-between animate-pulse">
           <div className="flex items-center gap-2 text-white font-bold text-xs tracking-wide">
             <Flame className="w-4 h-4 text-[#ffd700]" />
-            <span>BAJS-RUSCH AKTIV! (7x)</span>
+            <span>{t.frenzyActive}</span>
           </div>
           <span className="text-xs font-mono font-bold text-white bg-black/30 px-2 py-0.5 rounded">
             {frenzySecondsLeft}s
@@ -149,7 +194,7 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
       {/* Cheat detection warning */}
       {cheatActive && (
         <div className="w-full max-w-sm mb-3 p-2 rounded-lg bg-[#450e0e] border border-[#d63434] text-[#ff8080] text-xs font-bold text-center animate-bounce">
-          🚨 Autoclicker detekterad! Skiten sprider sig över skärmen!
+          {t.cheatDetected}
         </div>
       )}
 
@@ -158,14 +203,14 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
         <div className="text-3xl sm:text-4xl font-extrabold text-[#f5e6c8] tracking-tight tabular-nums font-display">
           {fmt(score)}{' '}
           <span className="text-lg sm:text-xl font-medium text-[#c9a775]">
-            skitpoäng
+            {t.pointsName}
           </span>
         </div>
 
         {/* Passive income / PPS */}
         <div className="text-sm font-medium text-[#b09068] mt-0.5 flex items-center justify-center gap-1.5 tabular-nums">
           <Zap className="w-3.5 h-3.5 text-[#e29e34]" />
-          <span>{fmtPps(pps)} sp/sek</span>
+          <span>{fmtPps(pps)} {t.perSecond}</span>
           {prestigeLevel > 0 && (
             <>
               <span className="text-[#5e4326]">·</span>
@@ -178,7 +223,7 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
       </div>
 
       {/* Big Clickable Mascot */}
-      <div className="relative my-4 flex items-center justify-center">
+      <div className="relative my-3 flex items-center justify-center">
         <button
           ref={buttonRef}
           onClick={handleClick}
@@ -187,7 +232,7 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
           onMouseLeave={() => setIsPressing(false)}
           onTouchStart={() => setIsPressing(true)}
           onTouchEnd={() => setIsPressing(false)}
-          aria-label="Klicka på bajsen för poäng"
+          aria-label={t.title}
           style={{ touchAction: 'manipulation' }}
           className={`relative p-2 rounded-full cursor-pointer focus:outline-none transition-transform duration-75 select-none ${
             isPressing ? 'scale-90' : 'hover:scale-105 active:scale-90'
@@ -196,7 +241,7 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
           <SkinGraphic
             skinId={activeSkinId}
             isPressing={isPressing}
-            className="w-40 h-40 sm:w-48 sm:h-48"
+            className="w-36 h-36 sm:w-44 sm:h-44"
             showAura={true}
           />
         </button>
@@ -206,8 +251,8 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
       </div>
 
       {/* Click value hint */}
-      <div className="text-xs text-[#8a6e4d] font-medium flex items-center gap-1.5 flex-wrap justify-center">
-        <span>+{fmt(clickGain)} sp per klick</span>
+      <div className="text-xs text-[#8a6e4d] font-medium flex items-center gap-1.5 flex-wrap justify-center mb-3">
+        <span>+{fmt(clickGain)} {t.perClick}</span>
         {plungerBought && (
           <span className="text-[10px] bg-[#613b14] text-[#ffd699] px-1.5 py-0.5 rounded font-mono font-bold">
             🪠 +2% PPS
@@ -218,7 +263,54 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
             🌶️ 10% CRIT
           </span>
         )}
-        <span className="text-[10px] text-[#6d5438]">(Tips: Tryck Mellanslag)</span>
+        <span className="text-[10px] text-[#6d5438]">{t.spaceHint}</span>
+      </div>
+
+      {/* ======================================================== */}
+      {/* POOP-O-METER: Engaging Click Progress Milestone Bar      */}
+      {/* ======================================================== */}
+      <div className="w-full max-w-sm px-3 py-2 rounded-xl bg-[#1e1309] border border-[#3d2713] shadow-inner space-y-1.5">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 font-bold text-[#ffd880]">
+            <Trophy className="w-3.5 h-3.5 text-[#e29e34]" />
+            <span>{t.meterTitle}</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#3d2713] text-[#c9a775] font-mono">
+              {totalClicks} {language === 'sv' ? 'klick' : 'clicks'}
+            </span>
+          </div>
+
+          <div className="text-[11px] text-[#b09068] font-mono">
+            {clicksLeft === 0 ? (
+              <span className="text-[#86efac] font-bold animate-pulse flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-[#ffd700]" /> {t.meterReward}
+              </span>
+            ) : (
+              <span>
+                <strong className="text-[#f5e6c8]">{clicksLeft}</strong> {t.meterClicks}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Progress Bar Container */}
+        <div className="w-full h-3 bg-[#110b06] rounded-full overflow-hidden p-0.5 border border-[#4d3215] relative">
+          <div
+            style={{ width: `${progressPct}%` }}
+            className="h-full rounded-full bg-gradient-to-r from-[#d97706] via-[#f59e0b] to-[#10b981] transition-all duration-150 relative shadow-sm"
+          >
+            {/* Shimmer light effect */}
+            <div className="absolute inset-0 bg-white/20 animate-pulse rounded-full" />
+          </div>
+        </div>
+
+        {/* Sub-label showing current segment */}
+        <div className="flex items-center justify-between text-[10px] text-[#786146] font-mono">
+          <span>{prevMilestone}</span>
+          <span className="text-[#a88a65] font-semibold">
+            {Math.round(progressPct)}% — {t.meterNext}: {currentMilestone}
+          </span>
+          <span>{currentMilestone}</span>
+        </div>
       </div>
 
       {/* Floating Score Numbers */}

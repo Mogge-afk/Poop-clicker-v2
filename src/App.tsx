@@ -23,6 +23,7 @@ import {
   milestoneMultiplier,
 } from './utils/calc';
 import { soundManager } from './utils/audio';
+import { Language, TRANSLATIONS } from './utils/i18n';
 
 import { Header } from './components/Header';
 import { ClickZone } from './components/ClickZone';
@@ -85,6 +86,40 @@ export default function App() {
   const [activeModal, setActiveModal] = useState<
     'stats' | 'achievements' | 'skins' | 'settings' | null
   >(null);
+
+  // Language state: Swedish ('sv') vs English ('en')
+  const [language, setLanguage] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem('poop_clicker_lang');
+      if (saved === 'sv' || saved === 'en') return saved;
+      // Check browser language
+      const browserLang = navigator.language?.toLowerCase() || '';
+      return browserLang.startsWith('sv') ? 'sv' : 'en';
+    } catch {
+      return 'sv';
+    }
+  });
+
+  const handleToggleLanguage = useCallback(() => {
+    setLanguage(prev => {
+      const next: Language = prev === 'sv' ? 'en' : 'sv';
+      try {
+        localStorage.setItem('poop_clicker_lang', next);
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSetLanguage = useCallback((lang: Language) => {
+    setLanguage(lang);
+    try {
+      localStorage.setItem('poop_clicker_lang', lang);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Theme state: dark (standard / nattläge) vs light (dagläge)
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -235,6 +270,10 @@ export default function App() {
 
         if (Array.isArray(data.unlockedSkins)) {
           setUnlockedSkins(data.unlockedSkins);
+        }
+
+        if (data.language === 'sv' || data.language === 'en') {
+          setLanguage(data.language);
         }
 
         // Calculate AFK Offline Income
@@ -424,6 +463,7 @@ export default function App() {
       plungerBought,
       goldenCornBought,
       fiberBoostBought,
+      language,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -797,6 +837,8 @@ export default function App() {
         totalAchievements={ACHIEVEMENTS.length}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
+        language={language}
+        onToggleLanguage={handleToggleLanguage}
       />
 
       {/* Main Game Container */}
@@ -804,6 +846,7 @@ export default function App() {
         {/* Clickable Zone with Mascot, Score and Passive income */}
         <ClickZone
           score={score}
+          totalClicks={totalClicks}
           pps={totalPps}
           clickGain={baseClickGain}
           prestigeMult={prestigeMult}
@@ -817,6 +860,16 @@ export default function App() {
           cheatActive={cheatActive}
           hotSauceBought={hotSauceBought}
           plungerBought={plungerBought}
+          language={language}
+          onMeterBonus={(bonus) => {
+            setScore(prev => prev + bonus);
+            setTotalEver(prev => prev + bonus);
+            const msg = language === 'sv'
+              ? `🎯 POOP-O-METER MILSTOLPE NÅDD! Du belönades med +${fmt(bonus)} skitpoäng!`
+              : `🎯 POOP-O-METER MILESTONE REACHED! Rewarded with +${fmt(bonus)} poop points!`;
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+          }}
         />
 
         {/* Upgrades & Powerups Section (Persistent React List) */}
@@ -849,6 +902,7 @@ export default function App() {
           // Prestige
           prestigeLevel={prestigeLevel}
           onPrestige={handlePrestige}
+          language={language}
         />
       </main>
 
@@ -926,6 +980,8 @@ export default function App() {
         lastSavedSecondsAgo={secondsSinceLastSave}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
+        language={language}
+        onSetLanguage={handleSetLanguage}
       />
 
       <OfflineEarningsModal

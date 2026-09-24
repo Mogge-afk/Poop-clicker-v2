@@ -16,8 +16,10 @@ import {
   Copy,
   Moon,
   Sun,
+  Globe,
 } from 'lucide-react';
 import { soundManager, SoundTheme } from '../utils/audio';
+import { Language, TRANSLATIONS } from '../utils/i18n';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -39,6 +41,8 @@ interface SettingsModalProps {
   lastSavedSecondsAgo: number;
   isDarkMode?: boolean;
   onToggleTheme?: () => void;
+  language?: Language;
+  onSetLanguage?: (lang: Language) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -61,7 +65,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   lastSavedSecondsAgo,
   isDarkMode = true,
   onToggleTheme,
+  language = 'sv',
+  onSetLanguage,
 }) => {
+  const t = TRANSLATIONS[language];
   const [copiedSave, setCopiedSave] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [importCode, setImportCode] = useState('');
@@ -251,16 +258,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          {/* Språk / Language val */}
+          {onSetLanguage && (
+            <div className="p-3.5 rounded-xl bg-[#24170c] border border-[#4d3215] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-[#f5e6c8] flex items-center gap-1.5">
+                  <Globe className="w-4 h-4 text-[#e29e34]" />
+                  {t.langLabel}
+                </span>
+                <span className="text-[11px] text-[#8a7252]">
+                  {language === 'sv' ? 'Svenska valt' : 'English selected'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => onSetLanguage('sv')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    language === 'sv'
+                      ? 'bg-[#3b2713] text-[#ffd880] border-[#c48d28] shadow-sm'
+                      : 'bg-[#181008] text-[#8c704f] border-[#382310] hover:text-[#f5e6c8]'
+                  }`}
+                >
+                  <span>🇸🇪 Svenska</span>
+                </button>
+                <button
+                  onClick={() => onSetLanguage('en')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    language === 'en'
+                      ? 'bg-[#3b2713] text-[#ffd880] border-[#c48d28] shadow-sm'
+                      : 'bg-[#181008] text-[#8c704f] border-[#382310] hover:text-[#f5e6c8]'
+                  }`}
+                >
+                  <span>🇬🇧 English</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Utseende & Tema (Dag/Natt) */}
           {onToggleTheme && (
             <div className="p-3.5 rounded-xl bg-[#24170c] border border-[#4d3215] space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-[#f5e6c8] flex items-center gap-1.5">
                   {isDarkMode ? <Moon className="w-4 h-4 text-[#ffd700]" /> : <Sun className="w-4 h-4 text-[#e29e34]" />}
-                  Färgtema (Dag / Natt)
+                  {t.colorTheme}
                 </span>
                 <span className="text-[11px] text-[#8a7252]">
-                  {isDarkMode ? 'Nattläge aktivt (standard)' : 'Dagläge aktivt'}
+                  {isDarkMode ? t.darkModeActive : t.lightModeActive}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -273,7 +317,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }`}
                 >
                   <Moon className="w-3.5 h-3.5" />
-                  <span>🌙 Nattläge (Standard)</span>
+                  <span>🌙 {language === 'sv' ? 'Nattläge (Standard)' : 'Night (Default)'}</span>
                 </button>
                 <button
                   onClick={() => { if (isDarkMode) onToggleTheme(); }}
@@ -284,7 +328,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }`}
                 >
                   <Sun className="w-3.5 h-3.5" />
-                  <span>☀️ Dagläge (Ljust)</span>
+                  <span>☀️ {language === 'sv' ? 'Dagläge (Ljust)' : 'Day (Light)'}</span>
                 </button>
               </div>
             </div>

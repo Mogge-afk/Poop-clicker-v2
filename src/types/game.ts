@@ -43,6 +43,7 @@ export interface GameSaveData {
   plungerBought?: boolean; // Klick ger +2% av nuvarande PPS (Turbo-Vaskrensare)
   goldenCornBought?: boolean; // Gyllene händelser dubbelt så ofta & +5s längre (Gyllene Majskorn)
   fiberBoostBought?: boolean; // Permanent +15% passiv produktion (Permanent Fiber-Boost)
+  language?: 'sv' | 'en';
 }
 
 export interface Skin {

@@ -9,7 +9,9 @@ import {
   Settings as SettingsIcon,
   Moon,
   Sun,
+  Globe,
 } from 'lucide-react';
+import { Language, TRANSLATIONS } from '../utils/i18n';
 
 interface HeaderProps {
   soundEnabled: boolean;
@@ -24,6 +26,8 @@ interface HeaderProps {
   totalAchievements: number;
   isDarkMode: boolean;
   onToggleTheme: () => void;
+  language: Language;
+  onToggleLanguage: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,13 +40,16 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSkins,
   onOpenSettings,
   achievementCount,
-  totalAchievements,
   isDarkMode,
   onToggleTheme,
+  language,
+  onToggleLanguage,
 }) => {
+  const t = TRANSLATIONS[language];
+
   return (
     <header className="w-full max-w-lg mx-auto px-3 sm:px-4 pt-3 pb-2.5 flex flex-col gap-2.5 border-b border-[#3d2915]/60 transition-colors">
-      {/* Rad 1: Rubrik i två nivåer + Dag/Natt-växlare */}
+      {/* Rad 1: Rubrik i två nivåer + Språkväxlare + Dag/Natt-växlare */}
       <div className="w-full flex items-center justify-between gap-2">
         <div className="flex flex-col min-w-0">
           {/* Rad 1: Poop Clicker */}
@@ -55,43 +62,63 @@ export const Header: React.FC<HeaderProps> = ({
               ...Deluxe
             </span>
             <span className="text-sm select-none" role="img" aria-label="bajs">💩</span>
-            <span className="text-[10px] font-semibold text-[#8a7252] ml-0.5">v2.0</span>
+            <span className="text-[10px] font-semibold text-[#8a7252] ml-0.5">v2.1</span>
           </div>
         </div>
 
-        {/* Dag- och Nattläge-knapp (Standard är nattläge) */}
-        <button
-          onClick={onToggleTheme}
-          title={isDarkMode ? 'Växla till Dagläge (Ljust tema)' : 'Växla till Nattläge (Mörkt tema - standard)'}
-          aria-label={isDarkMode ? 'Aktivera dagläge' : 'Aktivera nattläge'}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-sm ${
-            isDarkMode
-              ? 'bg-[#25180c] hover:bg-[#382413] text-[#f5e6c8] border-[#4d3215] hover:border-[#ffd700]/50'
-              : 'bg-[#ede4d5] hover:bg-[#dfd3c0] text-[#2b1b0c] border-[#cfc1ac] hover:border-[#b45309]/50'
-          }`}
-        >
-          {isDarkMode ? (
-            <>
-              <Moon className="w-3.5 h-3.5 text-[#ffd700] fill-[#ffd700]/20" />
-              <span className="text-[11px] sm:text-xs">Natt</span>
-            </>
-          ) : (
-            <>
-              <Sun className="w-3.5 h-3.5 text-[#e29e34] fill-[#e29e34]/30" />
-              <span className="text-[11px] sm:text-xs">Dag</span>
-            </>
-          )}
-        </button>
+        {/* Höger sida Rad 1: Språkväxlare & Tema-knapp */}
+        <div className="flex items-center gap-1.5">
+          {/* Språkväxlare med flagga */}
+          <button
+            onClick={onToggleLanguage}
+            title={language === 'sv' ? 'Switch to English 🇬🇧' : 'Växla till Svenska 🇸🇪'}
+            aria-label="Växla språk / Switch language"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-sm ${
+              isDarkMode
+                ? 'bg-[#25180c] hover:bg-[#382413] text-[#f5e6c8] border-[#4d3215] hover:border-[#ffd700]/50'
+                : 'bg-[#ede4d5] hover:bg-[#dfd3c0] text-[#2b1b0c] border-[#cfc1ac] hover:border-[#b45309]/50'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-[#e29e34]" />
+            <span className="text-[11px] sm:text-xs font-mono">
+              {language === 'sv' ? '🇸🇪 SV' : '🇬🇧 EN'}
+            </span>
+          </button>
+
+          {/* Dag- och Nattläge-knapp (Standard är nattläge) */}
+          <button
+            onClick={onToggleTheme}
+            title={isDarkMode ? 'Växla till Dagläge (Ljust tema)' : 'Växla till Nattläge (Mörkt tema - standard)'}
+            aria-label={isDarkMode ? 'Aktivera dagläge' : 'Aktivera nattläge'}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-sm ${
+              isDarkMode
+                ? 'bg-[#25180c] hover:bg-[#382413] text-[#f5e6c8] border-[#4d3215] hover:border-[#ffd700]/50'
+                : 'bg-[#ede4d5] hover:bg-[#dfd3c0] text-[#2b1b0c] border-[#cfc1ac] hover:border-[#b45309]/50'
+            }`}
+          >
+            {isDarkMode ? (
+              <>
+                <Moon className="w-3.5 h-3.5 text-[#ffd700] fill-[#ffd700]/20" />
+                <span className="text-[11px] sm:text-xs">{t.nightMode}</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-3.5 h-3.5 text-[#e29e34] fill-[#e29e34]/30" />
+                <span className="text-[11px] sm:text-xs">{t.dayMode}</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Rad 2: Övriga informationer & Ljudinställningar (Kompakt mobilanpassad meny) */}
+      {/* Rad 2: Ljudinställningar & Spelmenyer */}
       <div className="w-full flex items-center justify-between gap-1.5 p-1.5 rounded-xl bg-[#1c1209]/80 border border-[#3d2915]/70 backdrop-blur-xs">
         {/* Vänster: Ljudinställningar */}
         <div className="flex items-center gap-1">
           {/* SFX Ljudeffekter */}
           <button
             onClick={onToggleSound}
-            title={soundEnabled ? 'Ljudeffekter: På (klicka för att stänga av)' : 'Ljudeffekter: Av (klicka för att slå på)'}
+            title={soundEnabled ? 'SFX: ON' : 'SFX: OFF'}
             aria-label={soundEnabled ? 'Stäng av ljudeffekter' : 'Slå på ljudeffekter'}
             className={`flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
               soundEnabled
@@ -104,13 +131,13 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               <VolumeX className="w-3.5 h-3.5 text-[#856c4d]" />
             )}
-            <span className="text-[11px] hidden xs:inline">Ljud</span>
+            <span className="text-[11px] hidden xs:inline">{t.sound}</span>
           </button>
 
           {/* Bakgrundsmusik loop */}
           <button
             onClick={onToggleMusic}
-            title={musicEnabled ? 'Bakgrundsmusik: På (klicka för att pausa)' : 'Bakgrundsmusik: Av (klicka för att starta melodin)'}
+            title={musicEnabled ? 'Music: ON' : 'Music: OFF'}
             aria-label={musicEnabled ? 'Pausa bakgrundsmusik' : 'Starta bakgrundsmusik'}
             className={`flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
               musicEnabled
@@ -119,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Music className={`w-3.5 h-3.5 ${musicEnabled ? 'animate-bounce text-[#ffd700]' : ''}`} />
-            <span className="text-[11px] hidden xs:inline">Musik</span>
+            <span className="text-[11px] hidden xs:inline">{t.music}</span>
           </button>
         </div>
 
@@ -128,23 +155,23 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Statistik */}
           <button
             onClick={onOpenStats}
-            title="Statistik"
-            aria-label="Statistik"
+            title={t.stats}
+            aria-label={t.stats}
             className="p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-[#25180c] hover:bg-[#382413] text-[#c9a775] hover:text-[#f5e6c8] border border-[#4d3215] transition-colors cursor-pointer flex items-center gap-1"
           >
             <BarChart2 className="w-3.5 h-3.5" />
-            <span className="text-[11px] hidden sm:inline">Stats</span>
+            <span className="text-[11px] hidden sm:inline">{t.stats}</span>
           </button>
 
           {/* Prestationer */}
           <button
             onClick={onOpenAchievements}
-            title="Prestationer & Utmaningar"
-            aria-label="Prestationer & Utmaningar"
+            title={t.achievements}
+            aria-label={t.achievements}
             className="relative p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-[#25180c] hover:bg-[#382413] text-[#c9a775] hover:text-[#f5e6c8] border border-[#4d3215] transition-colors cursor-pointer flex items-center gap-1"
           >
             <Award className="w-3.5 h-3.5 text-[#e2ba34]" />
-            <span className="text-[11px] hidden sm:inline">Framsteg</span>
+            <span className="text-[11px] hidden sm:inline">{t.achievements}</span>
             {achievementCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-[#e29e34] text-[#120d07] font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-mono">
                 {achievementCount}
@@ -155,19 +182,19 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Skins */}
           <button
             onClick={onOpenSkins}
-            title="Skins & Utseenden"
-            aria-label="Skins & Utseenden"
+            title={t.skins}
+            aria-label={t.skins}
             className="p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-[#25180c] hover:bg-[#382413] text-[#c9a775] hover:text-[#f5e6c8] border border-[#4d3215] transition-colors cursor-pointer flex items-center gap-1"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#e2ba34]" />
-            <span className="text-[11px] hidden sm:inline">Skins</span>
+            <span className="text-[11px] hidden sm:inline">{t.skins}</span>
           </button>
 
           {/* Inställningar */}
           <button
             onClick={onOpenSettings}
-            title="Inställningar & Backup"
-            aria-label="Inställningar & Backup"
+            title={t.settings}
+            aria-label={t.settings}
             className="p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-[#25180c] hover:bg-[#382413] text-[#c9a775] hover:text-[#f5e6c8] border border-[#4d3215] transition-colors cursor-pointer"
           >
             <SettingsIcon className="w-3.5 h-3.5" />

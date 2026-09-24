@@ -12,6 +12,7 @@ import {
 import { UpgradeItem } from './UpgradeItem';
 import { fmt, effectivePps } from '../utils/calc';
 import { ArrowUpDown, Star, Sparkles, Check, Zap } from 'lucide-react';
+import { Language, TRANSLATIONS } from '../utils/i18n';
 
 interface UpgradeListProps {
   generators: GeneratorDef[];
@@ -42,6 +43,7 @@ interface UpgradeListProps {
   // Prestige
   prestigeLevel: number;
   onPrestige: () => void;
+  language?: Language;
 }
 
 export const UpgradeList: React.FC<UpgradeListProps> = ({
@@ -71,7 +73,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
   onBuyFiberBoost,
   prestigeLevel,
   onPrestige,
+  language = 'sv',
 }) => {
+  const t = TRANSLATIONS[language];
+
   // Sorted list of generators
   const sortedGens = React.useMemo(() => {
     const list = generators.map(def => {
@@ -98,14 +103,14 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
   const canPrestige = score >= currentPrestigeCost;
   const showPrestige = totalEver >= Math.min(currentPrestigeCost * 0.7, 10000) || prestigeLevel > 0;
 
-  // Boost definition cards
+  // Boost definition cards with translated strings
   const boostItems = [
     {
       id: 'lax',
-      name: 'Laxermedel Chock',
-      tag: 'Rund-boost',
+      name: t.boosts.laxTitle,
+      tag: t.boosts.laxTag,
       emoji: '💊',
-      desc: 'Öka nuvarande poäng med 5x direkt!',
+      desc: t.boosts.laxDesc,
       cost: BOOST_COSTS.lax,
       bought: laxUsed,
       canBuy: score >= BOOST_COSTS.lax && !laxUsed,
@@ -113,10 +118,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
     },
     {
       id: 'coffee',
-      name: 'Morgonkaffe (Espresso)',
-      tag: 'Rund-boost',
+      name: t.boosts.coffeeTitle,
+      tag: t.boosts.coffeeTag,
       emoji: '☕',
-      desc: '+25% snabbare passiv produktion under denna omgång!',
+      desc: t.boosts.coffeeDesc,
       cost: BOOST_COSTS.coffee,
       bought: coffeeBought,
       canBuy: score >= BOOST_COSTS.coffee && !coffeeBought,
@@ -124,10 +129,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
     },
     {
       id: 'hotSauce',
-      name: 'Stark Jalapeño-sås',
-      tag: 'Rund-boost',
+      name: t.boosts.hotSauceTitle,
+      tag: t.boosts.hotSauceTag,
       emoji: '🌶️',
-      desc: '10% chans för 5x kritiska klick med eld-effekt!',
+      desc: t.boosts.hotSauceDesc,
       cost: BOOST_COSTS.hotSauce,
       bought: hotSauceBought,
       canBuy: score >= BOOST_COSTS.hotSauce && !hotSauceBought,
@@ -135,10 +140,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
     },
     {
       id: 'softTp',
-      name: 'Dubbellagers Toapapper',
-      tag: 'Rund-boost',
+      name: t.boosts.softTpTitle,
+      tag: t.boosts.softTpTag,
       emoji: '🧼',
-      desc: '10% permanent rabatt på alla byggnader i omgången!',
+      desc: t.boosts.softTpDesc,
       cost: BOOST_COSTS.softTp,
       bought: softTpBought,
       canBuy: score >= BOOST_COSTS.softTp && !softTpBought,
@@ -146,10 +151,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
     },
     {
       id: 'plunger',
-      name: 'Turbo-Vaskrensare',
-      tag: 'Rund-boost',
+      name: t.boosts.plungerTitle,
+      tag: t.boosts.plungerTag,
       emoji: '🪠',
-      desc: 'Manuella klick ger direkt +2% av din totala sekundproduktion (PPS)!',
+      desc: t.boosts.plungerDesc,
       cost: BOOST_COSTS.plunger,
       bought: plungerBought,
       canBuy: score >= BOOST_COSTS.plunger && !plungerBought,
@@ -157,10 +162,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
     },
     {
       id: 'goldenCorn',
-      name: 'Gyllene Majskorn',
-      tag: 'Rund-boost',
+      name: t.boosts.goldenCornTitle,
+      tag: t.boosts.goldenCornTag,
       emoji: '🌽',
-      desc: 'Gyllene bajs flyger dubbelt så ofta och stannar +5s längre på skärmen!',
+      desc: t.boosts.goldenCornDesc,
       cost: BOOST_COSTS.goldenCorn,
       bought: goldenCornBought,
       canBuy: score >= BOOST_COSTS.goldenCorn && !goldenCornBought,
@@ -168,10 +173,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
     },
     {
       id: 'fiberBoost',
-      name: 'Permanent Fiber-Boost',
-      tag: 'PERMANENT',
+      name: t.boosts.fiberTitle,
+      tag: t.boosts.fiberTag,
       emoji: '🌾',
-      desc: 'Ger +15% passiv produktion PERMANENT (behålls även efter Prestige & Spolning)!',
+      desc: t.boosts.fiberDesc,
       cost: BOOST_COSTS.fiberBoost,
       bought: fiberBoostBought,
       canBuy: score >= BOOST_COSTS.fiberBoost && !fiberBoostBought,
@@ -185,7 +190,7 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
       {/* Buy Mode Selector Bar */}
       <div className="flex items-center justify-between gap-1 p-1 rounded-xl bg-[#1c1209] border border-[#3d2713]">
         {( [1, 10, 25, 'next', 'max'] as BuyMode[] ).map(mode => {
-          const label = mode === 'next' ? 'Nästa' : mode === 'max' ? 'MAX' : `${mode}x`;
+          const label = mode === 'next' ? t.nextMilestone : mode === 'max' ? 'MAX' : `${mode}x`;
           const isActive = buyMode === mode;
           return (
             <button
@@ -207,10 +212,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
       <div className="flex items-center justify-between text-xs text-[#a0825c] px-1">
         <span className="flex items-center gap-1 font-semibold text-[11px] uppercase tracking-wider text-[#856743]">
           <Sparkles className="w-3 h-3 text-[#e29e34]" />
-          Fabriker & Uppgraderingar
+          {t.storeTitle}
           {softTpBought && (
             <span className="text-[10px] bg-[#14532d] text-[#86efac] px-1.5 py-0.2 rounded font-mono ml-1 font-bold">
-              -10% rabatt
+              -10% {language === 'sv' ? 'rabatt' : 'off'}
             </span>
           )}
         </span>
@@ -222,10 +227,10 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
             aria-label="Sortera uppgraderingar"
             className="bg-[#21160b] text-[#c9a775] text-xs font-semibold rounded-lg px-2 py-1 border border-[#422912] focus:outline-none cursor-pointer"
           >
-            <option value="default">Standard</option>
-            <option value="price">Billigast först</option>
-            <option value="expensive">Dyrast först</option>
-            <option value="roi">Bästa ROI</option>
+            <option value="default">{t.sortDefault}</option>
+            <option value="price">{t.sortPrice}</option>
+            <option value="expensive">{t.sortExpensive}</option>
+            <option value="roi">{t.sortRoi}</option>
           </select>
         </div>
       </div>
@@ -251,9 +256,9 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
         <div className="flex items-center justify-between px-1">
           <span className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wider text-[#ffd700]">
             <Zap className="w-3.5 h-3.5 text-[#ffd700]" />
-            Special-boostar & Power-ups
+            {t.specialBoostsTitle}
           </span>
-          <span className="text-[10px] text-[#8a7252]">Engångsköp</span>
+          <span className="text-[10px] text-[#8a7252]">{t.oneTimePurchase}</span>
         </div>
 
         {boostItems.map(b => (
@@ -287,7 +292,7 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
                   </span>
                 </div>
                 <div className="text-[11px] text-[#b8956e] line-clamp-2">
-                  {b.bought ? 'KÖPT & AKTIV' : b.desc}
+                  {b.bought ? t.boughtActive : b.desc}
                 </div>
               </div>
             </div>
@@ -301,15 +306,15 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
                 {b.bought ? (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    <span>AKTIV</span>
+                    <span>{t.boughtActive}</span>
                   </>
                 ) : (
-                  `${fmt(b.cost)} sp`
+                  `${fmt(b.cost)} ${language === 'sv' ? 'sp' : 'pp'}`
                 )}
               </div>
               {!b.bought && (
                 <div className="text-[10px] text-[#8f7454]">
-                  {b.canBuy ? 'Köp nu' : `Krävs: ${fmt(b.cost)}`}
+                  {b.canBuy ? t.buyNow : `${t.required}: ${fmt(b.cost)}`}
                 </div>
               )}
             </div>
@@ -331,14 +336,14 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
           >
             <Star className="w-4 h-4 fill-current text-[#ffd700]" />
             <span>
-              Prestige till Nivå {prestigeLevel + 1} ({nextMultiplier}x mult)
+              {t.prestigeButton} {prestigeLevel + 1} ({nextMultiplier}x mult)
             </span>
             <span className="font-mono text-xs opacity-90">
-              — {fmt(currentPrestigeCost)} sp
+              — {fmt(currentPrestigeCost)} {language === 'sv' ? 'sp' : 'pp'}
             </span>
           </button>
           <div className="text-[11px] text-center text-[#8a7252] mt-1.5">
-            Spola toaletten! Nollställer uppgraderingar och rund-boostar, men behåller {fmt(startingKeep)} startpoäng, permanent Fiber-Boost & ger permanent {nextMultiplier}x produktion!
+            {t.prestigeDesc}
           </div>
         </div>
       )}
