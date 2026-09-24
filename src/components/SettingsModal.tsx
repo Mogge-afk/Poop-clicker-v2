@@ -14,6 +14,8 @@ import {
   Share2,
   GitBranch,
   Copy,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { soundManager, SoundTheme } from '../utils/audio';
 
@@ -35,6 +37,8 @@ interface SettingsModalProps {
   onImportSave: (saveCode: string) => boolean;
   onHardReset: () => void;
   lastSavedSecondsAgo: number;
+  isDarkMode?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -55,6 +59,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onImportSave,
   onHardReset,
   lastSavedSecondsAgo,
+  isDarkMode = true,
+  onToggleTheme,
 }) => {
   const [copiedSave, setCopiedSave] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -244,6 +250,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Utseende & Tema (Dag/Natt) */}
+          {onToggleTheme && (
+            <div className="p-3.5 rounded-xl bg-[#24170c] border border-[#4d3215] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-[#f5e6c8] flex items-center gap-1.5">
+                  {isDarkMode ? <Moon className="w-4 h-4 text-[#ffd700]" /> : <Sun className="w-4 h-4 text-[#e29e34]" />}
+                  Färgtema (Dag / Natt)
+                </span>
+                <span className="text-[11px] text-[#8a7252]">
+                  {isDarkMode ? 'Nattläge aktivt (standard)' : 'Dagläge aktivt'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => { if (!isDarkMode) onToggleTheme(); }}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    isDarkMode
+                      ? 'bg-[#3b2713] text-[#ffd880] border-[#c48d28] shadow-sm'
+                      : 'bg-[#181008] text-[#8c704f] border-[#382310] hover:text-[#f5e6c8]'
+                  }`}
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                  <span>🌙 Nattläge (Standard)</span>
+                </button>
+                <button
+                  onClick={() => { if (isDarkMode) onToggleTheme(); }}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    !isDarkMode
+                      ? 'bg-[#3b2713] text-[#ffd880] border-[#c48d28] shadow-sm'
+                      : 'bg-[#181008] text-[#8c704f] border-[#382310] hover:text-[#f5e6c8]'
+                  }`}
+                >
+                  <Sun className="w-3.5 h-3.5" />
+                  <span>☀️ Dagläge (Ljust)</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Share with Friends */}
           <div className="p-3.5 rounded-xl bg-[#24170c] border border-[#4d3215] space-y-2">

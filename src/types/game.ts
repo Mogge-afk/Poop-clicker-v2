@@ -51,11 +51,24 @@ export type BuyMode = 1 | 10 | 25 | 100 | 'next' | 'max';
 export type SortMode = 'default' | 'price' | 'expensive' | 'roi';
 
 export const COST_SCALE = 1.15;
-export const PRESTIGE_UNLOCK = 10000;
-export const PRESTIGE_COST = 10000;
-export const PRESTIGE_KEEP = 300;
+export const PRESTIGE_BASE_COST = 10000;
 export const LAX_COST = 10000;
 export const MILESTONES = [25, 50, 75, 100, 125, 150, 175, 200, 250, 300];
+
+/** Progressive cost for next prestige level: Level 0 -> 10k, Level 1 -> 40k, Level 2 -> 160k, Level 3 -> 650k... */
+export function getPrestigeCost(level: number): number {
+  return Math.floor(PRESTIGE_BASE_COST * Math.pow(4, level));
+}
+
+/** Progressive starting points kept after flush: Level 0 -> 300, Level 1 -> 800, Level 2 -> 2000, Level 3 -> 5000... */
+export function getPrestigeStartingKeep(level: number): number {
+  return Math.floor(300 * Math.pow(2.2, level));
+}
+
+/** Permanent multiplier for next prestige level */
+export function getPrestigeMultiplier(level: number): number {
+  return level + 1;
+}
 
 export const GENERATORS: GeneratorDef[] = [
   { id: 'bean', emoji: '🫘', name: 'Bönglas', baseCost: 10, basePps: 1, description: 'Rik på fibrer och gaser.', flavor: 'Början på all god matsmältning.' },
@@ -108,6 +121,14 @@ export const SKINS: Skin[] = [
     desc: 'Lyser i mörkret och muterar snabbare.',
     unlockReq: 'Äg minst 1 Bajsreaktor',
     isUnlocked: (g) => (g.gens.find(x => x.id === 'reactor')?.count ?? 0) >= 1,
+  },
+  {
+    id: 'cyber',
+    name: 'Cyber-Robo 3000',
+    emoji: '🤖💩',
+    desc: 'Titanplattor, neonblått cybervisir och AI-kylning.',
+    unlockReq: 'Nå minst Prestige Nivå 2',
+    isUnlocked: (g) => g.prestigeLevel >= 2,
   },
 ];
 

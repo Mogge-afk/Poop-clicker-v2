@@ -8,8 +8,9 @@ import {
   BuyMode,
   SortMode,
   GameSaveData,
-  PRESTIGE_COST,
-  PRESTIGE_KEEP,
+  getPrestigeCost,
+  getPrestigeStartingKeep,
+  getPrestigeMultiplier,
   LAX_COST,
 } from './types/game';
 import {
@@ -74,6 +75,40 @@ export default function App() {
   const [activeModal, setActiveModal] = useState<
     'stats' | 'achievements' | 'skins' | 'settings' | null
   >(null);
+
+  // Theme state: dark (standard / nattläge) vs light (dagläge)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('poop_clicker_theme');
+      return saved ? saved === 'dark' : true; // Nattläge som standard
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleTheme = useCallback(() => {
+    setIsDarkMode(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('poop_clicker_theme', next ? 'dark' : 'light');
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.remove('theme-light');
+      document.body.style.backgroundColor = '#120d07';
+      document.body.style.color = '#f5e6c8';
+    } else {
+      document.body.classList.add('theme-light');
+      document.body.style.backgroundColor = '#faf7f2';
+      document.body.style.color = '#2b1b0e';
+    }
+  }, [isDarkMode]);
 
   // Offline earnings modal
   const [offlineEarnings, setOfflineEarnings] = useState<{
@@ -390,18 +425,22 @@ export default function App() {
   }, [laxUsed, score]);
 
   const handlePrestige = useCallback(() => {
-    if (score < PRESTIGE_COST) return;
+    const requiredCost = getPrestigeCost(prestigeLevel);
+    if (score < requiredCost) return;
     const nextLevel = prestigeLevel + 1;
-    const nextMult = nextLevel + 1;
+    const nextMult = getPrestigeMultiplier(nextLevel);
+    const keepScore = getPrestigeStartingKeep(prestigeLevel);
 
     setPrestigeLevel(nextLevel);
     setPrestigeMult(nextMult);
-    setScore(PRESTIGE_KEEP);
+    setScore(keepScore);
     setTotalEver(0);
     setLaxUsed(false);
     setGens(GENERATORS.map(g => ({ id: g.id, count: 0, cost: g.baseCost })));
     soundManager.playPrestige();
     handleSave();
+    setToastMessage(`🚽 SLURP! Du spolade toaletten & nådde Prestige Nivå ${nextLevel}! Permanent ${nextMult}x produktion!`);
+    setTimeout(() => setToastMessage(null), 4000);
   }, [score, prestigeLevel, handleSave]);
 
   const handleGoldenCollect = useCallback(
@@ -528,7 +567,11 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#120d07] text-[#f5e6c8] flex flex-col items-center">
+    <div
+      className={`min-h-screen w-full max-w-full overflow-x-hidden flex flex-col items-center transition-colors duration-200 ${
+        isDarkMode ? 'bg-[#120d07] text-[#f5e6c8]' : 'theme-light bg-[#faf7f2] text-[#2b1b0e]'
+      }`}
+    >
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div className="fixed top-3 z-50 px-4 py-2 rounded-xl bg-gradient-to-r from-[#2c1d0f] to-[#452a11] border border-[#e29e34] shadow-2xl text-xs sm:text-sm font-bold text-[#ffd880] flex items-center gap-2 animate-bounce">
@@ -548,6 +591,8 @@ export default function App() {
         onOpenSettings={() => setActiveModal('settings')}
         achievementCount={unlockedAchievements.length}
         totalAchievements={ACHIEVEMENTS.length}
+        isDarkMode={isDarkMode}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main Game Container */}
@@ -559,6 +604,7 @@ export default function App() {
           clickGain={clickGain}
           prestigeMult={prestigeMult}
           prestigeLevel={prestigeLevel}
+          activeSkinId={activeSkin}
           activeSkinEmoji={activeSkinEmoji}
           frenzyActive={frenzyActive}
           frenzySecondsLeft={frenzySecondsLeft}
@@ -655,6 +701,8 @@ export default function App() {
         onImportSave={handleImportSave}
         onHardReset={handleHardReset}
         lastSavedSecondsAgo={secondsSinceLastSave}
+        isDarkMode={isDarkMode}
+        onToggleTheme={handleToggleTheme}
       />
 
       <OfflineEarningsModal

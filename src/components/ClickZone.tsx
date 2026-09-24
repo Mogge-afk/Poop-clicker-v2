@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { fmt, fmtPps } from '../utils/calc';
 import { soundManager } from '../utils/audio';
 import { Flame, Star, Zap } from 'lucide-react';
+import { SkinGraphic } from './SkinGraphic';
 
 interface FloatingNumber {
   id: number;
@@ -23,7 +24,8 @@ interface ClickZoneProps {
   clickGain: number;
   prestigeMult: number;
   prestigeLevel: number;
-  activeSkinEmoji: string;
+  activeSkinId: string;
+  activeSkinEmoji?: string;
   frenzyActive: boolean;
   frenzySecondsLeft: number;
   onManualClick: (e?: React.MouseEvent | KeyboardEvent) => void;
@@ -37,6 +39,7 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
   clickGain,
   prestigeMult,
   prestigeLevel,
+  activeSkinId,
   activeSkinEmoji,
   frenzyActive,
   frenzySecondsLeft,
@@ -180,11 +183,16 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
           onTouchEnd={() => setIsPressing(false)}
           aria-label="Klicka på bajsen för poäng"
           style={{ touchAction: 'manipulation' }}
-          className={`relative text-7xl sm:text-8xl p-5 rounded-full cursor-pointer focus:outline-none transition-transform duration-75 select-none ${
-            isPressing ? 'scale-85 -rotate-3' : 'hover:scale-105 active:scale-85'
-          } filter drop-shadow-[0_8px_24px_rgba(0,0,0,0.7)]`}
+          className={`relative p-2 rounded-full cursor-pointer focus:outline-none transition-transform duration-75 select-none ${
+            isPressing ? 'scale-90' : 'hover:scale-105 active:scale-90'
+          }`}
         >
-          {activeSkinEmoji}
+          <SkinGraphic
+            skinId={activeSkinId}
+            isPressing={isPressing}
+            className="w-40 h-40 sm:w-48 sm:h-48"
+            showAura={true}
+          />
         </button>
 
         {/* Outer subtle glow circle */}

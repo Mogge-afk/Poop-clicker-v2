@@ -1,5 +1,14 @@
 import React, { useMemo } from 'react';
-import { GeneratorDef, GeneratorState, BuyMode, SortMode, LAX_COST, PRESTIGE_COST, PRESTIGE_UNLOCK } from '../types/game';
+import {
+  GeneratorDef,
+  GeneratorState,
+  BuyMode,
+  SortMode,
+  LAX_COST,
+  getPrestigeCost,
+  getPrestigeStartingKeep,
+  getPrestigeMultiplier,
+} from '../types/game';
 import { UpgradeItem } from './UpgradeItem';
 import { fmt, effectivePps } from '../utils/calc';
 import { Sparkles, ArrowUpDown, Star, Pill } from 'lucide-react';
@@ -57,8 +66,11 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
   }, [generators, generatorStates, sortMode]);
 
   const canAffordLax = score >= LAX_COST && !laxUsed;
-  const canPrestige = score >= PRESTIGE_COST;
-  const showPrestige = totalEver >= PRESTIGE_UNLOCK;
+  const currentPrestigeCost = getPrestigeCost(prestigeLevel);
+  const nextMultiplier = getPrestigeMultiplier(prestigeLevel + 1);
+  const startingKeep = getPrestigeStartingKeep(prestigeLevel);
+  const canPrestige = score >= currentPrestigeCost;
+  const showPrestige = totalEver >= Math.min(currentPrestigeCost * 0.7, 10000) || prestigeLevel > 0;
 
   return (
     <div className="w-full flex flex-col gap-3">
@@ -192,14 +204,14 @@ export const UpgradeList: React.FC<UpgradeListProps> = ({
           >
             <Star className="w-4 h-4 fill-current text-[#ffd700]" />
             <span>
-              Prestige till Nivå {prestigeLevel + 1} (x{prestigeLevel + 2} mult)
+              Prestige till Nivå {prestigeLevel + 1} ({nextMultiplier}x mult)
             </span>
             <span className="font-mono text-xs opacity-90">
-              — {fmt(PRESTIGE_COST)} sp
+              — {fmt(currentPrestigeCost)} sp
             </span>
           </button>
           <div className="text-[11px] text-center text-[#8a7252] mt-1.5">
-            Nollställer uppgraderingar men behåller {300} startpoäng & ger permanent produktionsboost!
+            Spola toaletten! Nollställer uppgraderingar men behåller {fmt(startingKeep)} startpoäng & ger permanent {nextMultiplier}x produktion!
           </div>
         </div>
       )}

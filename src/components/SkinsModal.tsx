@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Sparkles, Check, Lock } from 'lucide-react';
 import { Skin } from '../types/game';
+import { SkinGraphic } from './SkinGraphic';
 
 interface SkinsModalProps {
   isOpen: boolean;
@@ -61,8 +62,8 @@ export const SkinsModal: React.FC<SkinsModalProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="text-3xl select-none p-1.5 rounded-xl bg-[#2d1b0e] border border-[#543517]">
-                    {skin.emoji}
+                  <div className="w-13 h-13 shrink-0 flex items-center justify-center p-1 rounded-xl bg-[#2d1b0e] border border-[#543517] overflow-hidden">
+                    <SkinGraphic skinId={skin.id} className="w-11 h-11" showAura={false} />
                   </div>
                   <div className="min-w-0">
                     <div className="font-bold text-sm text-[#f5e6c8] truncate">
