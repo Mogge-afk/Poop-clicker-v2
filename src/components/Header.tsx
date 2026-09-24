@@ -10,6 +10,7 @@ import {
   Moon,
   Sun,
   Globe,
+  Calendar,
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../utils/i18n';
 
@@ -21,9 +22,11 @@ interface HeaderProps {
   onOpenStats: () => void;
   onOpenAchievements: () => void;
   onOpenSkins: () => void;
+  onOpenDaily: () => void;
   onOpenSettings: () => void;
   achievementCount: number;
   totalAchievements: number;
+  unclaimedDailyCount?: number;
   isDarkMode: boolean;
   onToggleTheme: () => void;
   language: Language;
@@ -38,8 +41,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenStats,
   onOpenAchievements,
   onOpenSkins,
+  onOpenDaily,
   onOpenSettings,
   achievementCount,
+  unclaimedDailyCount = 0,
   isDarkMode,
   onToggleTheme,
   language,
@@ -62,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
               ...Deluxe
             </span>
             <span className="text-sm select-none" role="img" aria-label="bajs">💩</span>
-            <span className="text-[10px] font-semibold text-[#8a7252] ml-0.5">v2.1</span>
+            <span className="text-[10px] font-semibold text-[#8a7252] ml-0.5">v2.2</span>
           </div>
         </div>
 
@@ -150,8 +155,26 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Höger: Spelmenyer (Statistik, Prestationer, Skins, Inställningar) */}
+        {/* Höger: Spelmenyer (Dagliga Utmaningar, Statistik, Prestationer, Skins, Inställningar) */}
         <div className="flex items-center gap-1">
+          {/* Dagliga Utmaningar / Daily Quests */}
+          <button
+            onClick={onOpenDaily}
+            title={language === 'sv' ? 'Dagliga Utmaningar' : 'Daily Challenges'}
+            aria-label={language === 'sv' ? 'Dagliga Utmaningar' : 'Daily Challenges'}
+            className="relative p-1.5 sm:px-2 sm:py-1.5 rounded-lg bg-[#2f1f10] hover:bg-[#3d2713] text-[#ffd700] border border-[#664620] hover:border-[#ffd700]/60 transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+          >
+            <Calendar className="w-3.5 h-3.5 text-[#f59e0b]" />
+            <span className="text-[11px] font-bold hidden sm:inline">
+              {language === 'sv' ? 'Uppdrag' : 'Quests'}
+            </span>
+            {unclaimedDailyCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-[#10b981] text-[#062419] font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-mono animate-pulse shadow-sm">
+                {unclaimedDailyCount}
+              </span>
+            )}
+          </button>
+
           {/* Statistik */}
           <button
             onClick={onOpenStats}

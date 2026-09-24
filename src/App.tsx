@@ -34,6 +34,8 @@ import { AchievementsModal } from './components/AchievementsModal';
 import { SkinsModal } from './components/SkinsModal';
 import { SettingsModal } from './components/SettingsModal';
 import { OfflineEarningsModal } from './components/OfflineEarningsModal';
+import { DailyChallenges, DailyChallengesState } from './components/DailyChallenges';
+import { getTodayDateString, generateDailyChallenges, checkStreak } from './utils/dailyQuests';
 
 const SAVE_KEY = 'poop_clicker_save_v2';
 const LEGACY_SAVE_KEY = 'poop_clicker_save';
@@ -84,7 +86,7 @@ export default function App() {
 
   // Modals
   const [activeModal, setActiveModal] = useState<
-    'stats' | 'achievements' | 'skins' | 'settings' | null
+    'stats' | 'achievements' | 'skins' | 'settings' | 'daily' | null
   >(null);
 
   // Language state: Swedish ('sv') vs English ('en')
@@ -177,6 +179,47 @@ export default function App() {
 
   // Toast notification for newly unlocked achievement
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Daily Challenges State
+  const [dailyState, setDailyState] = useState<DailyChallengesState>(() => {
+    const todayStr = getTodayDateString();
+    try {
+      const savedRaw = localStorage.getItem('poop_clicker_daily_v1');
+      if (savedRaw) {
+        const parsed: DailyChallengesState = JSON.parse(savedRaw);
+        if (parsed.date === todayStr) {
+          return parsed;
+        } else {
+          // New day! Advance or check streak
+          const newStreak = checkStreak(parsed.lastCompletedDate, parsed.streak || 1, todayStr);
+          return {
+            date: todayStr,
+            challenges: generateDailyChallenges(todayStr, 10),
+            allClaimedBonusCollected: false,
+            streak: newStreak,
+            lastCompletedDate: parsed.lastCompletedDate,
+          };
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return {
+      date: todayStr,
+      challenges: generateDailyChallenges(todayStr, 10),
+      allClaimedBonusCollected: false,
+      streak: 1,
+    };
+  });
+
+  // Save daily state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('poop_clicker_daily_v1', JSON.stringify(dailyState));
+    } catch {
+      // ignore
+    }
+  }, [dailyState]);
 
   // Achievement bonus %
   const achievementBonusPct = useMemo(() => {
@@ -492,6 +535,35 @@ export default function App() {
     fiberBoostBought,
   ]);
 
+  // Helper to increment daily challenge progress
+  const updateDailyProgress = useCallback((type: 'clicks' | 'buildings' | 'golden' | 'crits', amount: number = 1) => {
+    setDailyState(prev => {
+      let anyChanged = false;
+      const updated = prev.challenges.map(ch => {
+        if (ch.type === type && !ch.completed) {
+          const nextVal = ch.current + amount;
+          const completed = nextVal >= ch.target;
+          anyChanged = true;
+          if (completed && !ch.completed) {
+            soundManager.playMilestone();
+            const msg = language === 'sv'
+              ? `🌟 DAGLIG UTMANING KLAR: "${ch.titleSv}"! Hämta din belöning i Uppdrag!`
+              : `🌟 DAILY CHALLENGE COMPLETED: "${ch.titleEn}"! Claim your reward in Quests!`;
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+          }
+          return {
+            ...ch,
+            current: nextVal,
+            completed,
+          };
+        }
+        return ch;
+      });
+      return anyChanged ? { ...prev, challenges: updated } : prev;
+    });
+  }, [language]);
+
   const handleManualClick = useCallback((): { gained: number; isCrit: boolean } => {
     let gained = baseClickGain;
     let isCrit = false;
@@ -506,8 +578,14 @@ export default function App() {
     setTotalEver(prev => prev + gained);
     setTotalClicks(prev => prev + 1);
 
+    // Update Daily Quests progress
+    updateDailyProgress('clicks', 1);
+    if (isCrit) {
+      updateDailyProgress('crits', 1);
+    }
+
     return { gained, isCrit };
-  }, [baseClickGain, hotSauceBought]);
+  }, [baseClickGain, hotSauceBought, updateDailyProgress]);
 
   const handleBuyUpgrade = useCallback(
     (id: string, amount: number, totalCost: number) => {
@@ -532,8 +610,11 @@ export default function App() {
           return { ...g, count: nextCount, cost: nextCost };
         })
       );
+
+      // Update Daily Quests progress
+      updateDailyProgress('buildings', amount);
     },
-    [score]
+    [score, updateDailyProgress]
   );
 
   // 1. Laxative Boost
@@ -655,10 +736,73 @@ export default function App() {
         setTotalEver(prev => prev + reward);
         setToastMessage(`💰 Gyllene tur! Du fick +${fmt(reward)} skitpoäng!`);
       }
+      // Update Daily Quests progress
+      updateDailyProgress('golden', 1);
       setTimeout(() => setToastMessage(null), 4000);
     },
-    [score, totalPps, goldenCornBought]
+    [score, totalPps, goldenCornBought, updateDailyProgress]
   );
+
+  // Claim single daily challenge reward
+  const handleClaimChallengeReward = useCallback((challengeId: string) => {
+    setDailyState(prev => {
+      let rewardGiven = false;
+      const updated = prev.challenges.map(ch => {
+        if (ch.id === challengeId && ch.completed && !ch.claimed) {
+          rewardGiven = true;
+          // Apply reward
+          if (ch.rewardType === 'points') {
+            const streakMult = prev.streak >= 3 ? 1.5 : 1;
+            const finalVal = Math.round(ch.rewardValue * streakMult);
+            setScore(s => s + finalVal);
+            setTotalEver(t => t + finalVal);
+            const msg = language === 'sv'
+              ? `🎁 BELÖNING HÄMTAD: +${fmt(finalVal)} skitpoäng! ${prev.streak >= 3 ? '(1.5x Streak-bonus!)' : ''}`
+              : `🎁 REWARD CLAIMED: +${fmt(finalVal)} poop points! ${prev.streak >= 3 ? '(1.5x Streak bonus!)' : ''}`;
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+          } else if (ch.rewardType === 'buff_frenzy') {
+            setFrenzySecondsLeft(ch.rewardValue);
+            const msg = language === 'sv'
+              ? `🔥 UTMANINGS-BONUS: 7x BAJS-RUSCH i ${ch.rewardValue} sekunder!`
+              : `🔥 QUEST REWARD: 7x POOP FRENZY for ${ch.rewardValue} seconds!`;
+            setToastMessage(msg);
+            setTimeout(() => setToastMessage(null), 4000);
+          }
+          return { ...ch, claimed: true };
+        }
+        return ch;
+      });
+
+      if (!rewardGiven) return prev;
+      return { ...prev, challenges: updated };
+    });
+  }, [language]);
+
+  // Claim Master's Chest (3/3 completed)
+  const handleClaimAllBonus = useCallback(() => {
+    setDailyState(prev => {
+      if (prev.allClaimedBonusCollected) return prev;
+      // Unleash 60 seconds Frenzy + huge score bonus based on current PPS
+      const bonusPts = Math.max(totalPps * 300, 5000);
+      setScore(s => s + bonusPts);
+      setTotalEver(t => t + bonusPts);
+      setFrenzySecondsLeft(60);
+
+      const todayStr = getTodayDateString();
+      const msg = language === 'sv'
+        ? `👑 DUMP-MÄSTARE! Dagens kista öppnad: +${fmt(bonusPts)} poäng & 60s Bajs-rusch!`
+        : `👑 QUEST MASTER! Daily chest opened: +${fmt(bonusPts)} points & 60s Poop Frenzy!`;
+      setToastMessage(msg);
+      setTimeout(() => setToastMessage(null), 5000);
+
+      return {
+        ...prev,
+        allClaimedBonusCollected: true,
+        lastCompletedDate: todayStr,
+      };
+    });
+  }, [totalPps, language]);
 
   const handleCheatDetected = useCallback(() => {
     if (cheatActive) return;
@@ -832,9 +976,11 @@ export default function App() {
         onOpenStats={() => setActiveModal('stats')}
         onOpenAchievements={() => setActiveModal('achievements')}
         onOpenSkins={() => setActiveModal('skins')}
+        onOpenDaily={() => setActiveModal('daily')}
         onOpenSettings={() => setActiveModal('settings')}
         achievementCount={unlockedAchievements.length}
         totalAchievements={ACHIEVEMENTS.length}
+        unclaimedDailyCount={dailyState.challenges.filter(c => c.completed && !c.claimed).length}
         isDarkMode={isDarkMode}
         onToggleTheme={handleToggleTheme}
         language={language}
@@ -989,6 +1135,16 @@ export default function App() {
         points={offlineEarnings.points}
         secondsAway={offlineEarnings.seconds}
         onClaim={() => setOfflineEarnings(prev => ({ ...prev, show: false }))}
+      />
+
+      {/* Daily Challenges (Dagliga Utmaningar) Modal */}
+      <DailyChallenges
+        isOpen={activeModal === 'daily'}
+        onClose={() => setActiveModal(null)}
+        challengesState={dailyState}
+        onClaimReward={handleClaimChallengeReward}
+        onClaimAllBonus={handleClaimAllBonus}
+        language={language}
       />
     </div>
   );
