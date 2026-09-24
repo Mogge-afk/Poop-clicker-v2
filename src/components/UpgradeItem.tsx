@@ -9,6 +9,7 @@ interface UpgradeItemProps {
   totalPps: number;
   buyMode: BuyMode;
   onBuy: (id: string, amount: number, cost: number) => void;
+  discountMult?: number;
 }
 
 export const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({
@@ -18,13 +19,20 @@ export const UpgradeItem: React.FC<UpgradeItemProps> = React.memo(({
   totalPps,
   buyMode,
   onBuy,
+  discountMult = 1,
 }) => {
   const count = state.count;
   const cost = state.cost;
 
-  // Calculate buy amount and cost based on mode
-  const amount = useMemo(() => calcBuyAmount(score, cost, count, buyMode), [score, cost, count, buyMode]);
-  const totalCost = useMemo(() => calcBuyCost(cost, amount), [cost, amount]);
+  // Calculate buy amount and cost based on mode and discount
+  const amount = useMemo(
+    () => calcBuyAmount(score, cost, count, buyMode, discountMult),
+    [score, cost, count, buyMode, discountMult]
+  );
+  const totalCost = useMemo(
+    () => calcBuyCost(cost, amount, discountMult),
+    [cost, amount, discountMult]
+  );
   const canAfford = score >= totalCost && amount > 0;
 
   const currentPps = effectivePps(def, count);

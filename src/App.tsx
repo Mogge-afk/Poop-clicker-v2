@@ -8,6 +8,7 @@ import {
   BuyMode,
   SortMode,
   GameSaveData,
+  BOOST_COSTS,
   getPrestigeCost,
   getPrestigeStartingKeep,
   getPrestigeMultiplier,
@@ -17,6 +18,7 @@ import {
   calculateBasePps,
   calculateTotalPps,
   calcNewCostAfterBuy,
+  calcBuyCost,
   fmt,
   milestoneMultiplier,
 } from './utils/calc';
@@ -51,6 +53,14 @@ export default function App() {
   const [prestigeLevel, setPrestigeLevel] = useState<number>(0);
   const [laxUsed, setLaxUsed] = useState<boolean>(false);
   const [totalPlayTimeSeconds, setTotalPlayTimeSeconds] = useState<number>(0);
+
+  // Boost States
+  const [coffeeBought, setCoffeeBought] = useState<boolean>(false);
+  const [hotSauceBought, setHotSauceBought] = useState<boolean>(false);
+  const [softTpBought, setSoftTpBought] = useState<boolean>(false);
+  const [plungerBought, setPlungerBought] = useState<boolean>(false);
+  const [goldenCornBought, setGoldenCornBought] = useState<boolean>(false);
+  const [fiberBoostBought, setFiberBoostBought] = useState<boolean>(false);
 
   // Generators state
   const [gens, setGens] = useState<GeneratorState[]>(() =>
@@ -141,20 +151,33 @@ export default function App() {
     );
   }, [unlockedAchievements]);
 
+  // Passive bonus % from boosts (Coffee: +25%, Fiber Boost: +15%)
+  const passiveBonusPct = useMemo(() => {
+    let bonus = 0;
+    if (coffeeBought) bonus += 25;
+    if (fiberBoostBought) bonus += 15;
+    return bonus;
+  }, [coffeeBought, fiberBoostBought]);
+
   // Total PPS calculation
   const totalPps = useMemo(() => {
     return calculateTotalPps(
       gens,
       prestigeMult,
       achievementBonusPct,
-      frenzyActive ? 7 : 1
+      frenzyActive ? 7 : 1,
+      passiveBonusPct
     );
-  }, [gens, prestigeMult, achievementBonusPct, frenzyActive]);
+  }, [gens, prestigeMult, achievementBonusPct, frenzyActive, passiveBonusPct]);
 
-  // Click gain calculation
-  const clickGain = useMemo(() => {
-    return 1 * prestigeMult * (frenzyActive ? 7 : 1);
-  }, [prestigeMult, frenzyActive]);
+  // Base Click gain calculation
+  const baseClickGain = useMemo(() => {
+    let base = 1 * prestigeMult;
+    if (plungerBought) {
+      base += Math.max(1, Math.floor(totalPps * 0.02));
+    }
+    return base * (frenzyActive ? 7 : 1);
+  }, [prestigeMult, plungerBought, totalPps, frenzyActive]);
 
   // Current active skin emoji
   const activeSkinEmoji = useMemo(() => {
@@ -177,6 +200,14 @@ export default function App() {
         setPrestigeLevel(Number(data.prestigeLevel) || 0);
         setLaxUsed(Boolean(data.laxUsed));
         setTotalPlayTimeSeconds(Number(data.totalPlayTimeSeconds) || 0);
+
+        // Boosts
+        setCoffeeBought(Boolean(data.coffeeBought));
+        setHotSauceBought(Boolean(data.hotSauceBought));
+        setSoftTpBought(Boolean(data.softTpBought));
+        setPlungerBought(Boolean(data.plungerBought));
+        setGoldenCornBought(Boolean(data.goldenCornBought));
+        setFiberBoostBought(Boolean(data.fiberBoostBought));
 
         if (Array.isArray(data.gens)) {
           setGens(prev =>
@@ -213,7 +244,11 @@ export default function App() {
           if (elapsedSeconds > 15) {
             // Calculate base income rate with saved generators
             const baseGens = Array.isArray(data.gens) ? data.gens : [];
-            const baseRate = calculateBasePps(baseGens) * (data.prestigeMult || 1);
+            const boostPct = (data.coffeeBought ? 25 : 0) + (data.fiberBoostBought ? 15 : 0);
+            const baseRate =
+              calculateBasePps(baseGens) *
+              (data.prestigeMult || 1) *
+              (1 + boostPct / 100);
             // Cap offline progress at 8 hours (28800s)
             const cappedSeconds = Math.min(elapsedSeconds, 28800);
             const offlineGained = Math.floor(baseRate * cappedSeconds);
@@ -262,7 +297,6 @@ export default function App() {
   // ==========================================
 
   // Fast tick loop for Passive income (100ms)
-  // Notice: this updates numeric state smoothly and DOES NOT recreate DOM elements!
   useEffect(() => {
     const interval = window.setInterval(() => {
       if (totalPps > 0) {
@@ -303,9 +337,27 @@ export default function App() {
       clearInterval(saveInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  });
+  }, [
+    score,
+    totalEver,
+    totalClicks,
+    prestigeMult,
+    prestigeLevel,
+    laxUsed,
+    gens,
+    unlockedAchievements,
+    activeSkin,
+    unlockedSkins,
+    totalPlayTimeSeconds,
+    coffeeBought,
+    hotSauceBought,
+    softTpBought,
+    plungerBought,
+    goldenCornBought,
+    fiberBoostBought,
+  ]);
 
-  // Achievement and Skin unlock check loop
+  // Achievement Check
   useEffect(() => {
     const currentSaveData: GameSaveData = {
       score,
@@ -320,6 +372,12 @@ export default function App() {
       unlockedSkins,
       lastSavedTime,
       totalPlayTimeSeconds,
+      coffeeBought,
+      hotSauceBought,
+      softTpBought,
+      plungerBought,
+      goldenCornBought,
+      fiberBoostBought,
     };
 
     // Check Achievements
@@ -360,6 +418,12 @@ export default function App() {
       unlockedSkins,
       lastSavedTime: Date.now(),
       totalPlayTimeSeconds,
+      coffeeBought,
+      hotSauceBought,
+      softTpBought,
+      plungerBought,
+      goldenCornBought,
+      fiberBoostBought,
     };
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -380,13 +444,30 @@ export default function App() {
     activeSkin,
     unlockedSkins,
     totalPlayTimeSeconds,
+    coffeeBought,
+    hotSauceBought,
+    softTpBought,
+    plungerBought,
+    goldenCornBought,
+    fiberBoostBought,
   ]);
 
-  const handleManualClick = useCallback(() => {
-    setScore(prev => prev + clickGain);
-    setTotalEver(prev => prev + clickGain);
+  const handleManualClick = useCallback((): { gained: number; isCrit: boolean } => {
+    let gained = baseClickGain;
+    let isCrit = false;
+
+    // Hot Sauce: 10% chance for 5x critical hit
+    if (hotSauceBought && Math.random() < 0.1) {
+      isCrit = true;
+      gained *= 5;
+    }
+
+    setScore(prev => prev + gained);
+    setTotalEver(prev => prev + gained);
     setTotalClicks(prev => prev + 1);
-  }, [clickGain]);
+
+    return { gained, isCrit };
+  }, [baseClickGain, hotSauceBought]);
 
   const handleBuyUpgrade = useCallback(
     (id: string, amount: number, totalCost: number) => {
@@ -415,15 +496,79 @@ export default function App() {
     [score]
   );
 
+  // 1. Laxative Boost
   const handleUseLax = useCallback(() => {
-    if (laxUsed || score < LAX_COST) return;
+    if (laxUsed || score < BOOST_COSTS.lax) return;
     const bonus = score * 4;
     setScore(prev => prev + bonus);
     setTotalEver(prev => prev + bonus);
     setLaxUsed(true);
     soundManager.playPrestige();
+    setToastMessage('💊 LAXERMEDEL KICKADE IN! Du fick 5x din totala skitbank direkt!');
+    setTimeout(() => setToastMessage(null), 4000);
   }, [laxUsed, score]);
 
+  // 2. Coffee Boost
+  const handleBuyCoffee = useCallback(() => {
+    if (coffeeBought || score < BOOST_COSTS.coffee) return;
+    setScore(prev => prev - BOOST_COSTS.coffee);
+    setCoffeeBought(true);
+    soundManager.playMilestone();
+    setToastMessage('☕ MORGONKAFFE INTILLAT! +25% snabbare passiv produktion i denna runda!');
+    setTimeout(() => setToastMessage(null), 4000);
+  }, [coffeeBought, score]);
+
+  // 3. Hot Sauce Boost
+  const handleBuyHotSauce = useCallback(() => {
+    if (hotSauceBought || score < BOOST_COSTS.hotSauce) return;
+    setScore(prev => prev - BOOST_COSTS.hotSauce);
+    setHotSauceBought(true);
+    soundManager.playMilestone();
+    setToastMessage('🌶️ STARK JALAPEÑO AKTIVERAD! 10% chans för 5x kritiska klick!');
+    setTimeout(() => setToastMessage(null), 4000);
+  }, [hotSauceBought, score]);
+
+  // 4. Soft TP Discount Boost
+  const handleBuySoftTp = useCallback(() => {
+    if (softTpBought || score < BOOST_COSTS.softTp) return;
+    setScore(prev => prev - BOOST_COSTS.softTp);
+    setSoftTpBought(true);
+    soundManager.playMilestone();
+    setToastMessage('🧼 DUBBELLAGERS TOAPAPPER! 10% rabatt på alla byggnader i denna runda!');
+    setTimeout(() => setToastMessage(null), 4000);
+  }, [softTpBought, score]);
+
+  // 5. Plunger PPS Click Boost
+  const handleBuyPlunger = useCallback(() => {
+    if (plungerBought || score < BOOST_COSTS.plunger) return;
+    setScore(prev => prev - BOOST_COSTS.plunger);
+    setPlungerBought(true);
+    soundManager.playMilestone();
+    setToastMessage('🪠 TURBO-VASKRENSARE MONTERAD! Manuella klick ger nu +2% av din totala PPS!');
+    setTimeout(() => setToastMessage(null), 4000);
+  }, [plungerBought, score]);
+
+  // 6. Golden Corn Event Boost
+  const handleBuyGoldenCorn = useCallback(() => {
+    if (goldenCornBought || score < BOOST_COSTS.goldenCorn) return;
+    setScore(prev => prev - BOOST_COSTS.goldenCorn);
+    setGoldenCornBought(true);
+    soundManager.playMilestone();
+    setToastMessage('🌽 GYLLENE MAJSKORN AKTIVT! Gyllene händelser dyker upp dubbelt så ofta!');
+    setTimeout(() => setToastMessage(null), 4000);
+  }, [goldenCornBought, score]);
+
+  // 7. PERMANENT Fiber-Boost (Persists through Prestige)
+  const handleBuyFiberBoost = useCallback(() => {
+    if (fiberBoostBought || score < BOOST_COSTS.fiberBoost) return;
+    setScore(prev => prev - BOOST_COSTS.fiberBoost);
+    setFiberBoostBought(true);
+    soundManager.playMilestone();
+    setToastMessage('🌾 PERMANENT FIBER-BOOST KÖPT! +15% passiv produktion FÖR ALLTID (behålls även efter spolning)!');
+    setTimeout(() => setToastMessage(null), 5000);
+  }, [fiberBoostBought, score]);
+
+  // Prestige Flush Toilet
   const handlePrestige = useCallback(() => {
     const requiredCost = getPrestigeCost(prestigeLevel);
     if (score < requiredCost) return;
@@ -435,22 +580,36 @@ export default function App() {
     setPrestigeMult(nextMult);
     setScore(keepScore);
     setTotalEver(0);
+
+    // Reset round-specific boosts (Lax, Coffee, Hot Sauce, Soft TP, Plunger, Golden Corn)
     setLaxUsed(false);
+    setCoffeeBought(false);
+    setHotSauceBought(false);
+    setSoftTpBought(false);
+    setPlungerBought(false);
+    setGoldenCornBought(false);
+    // Note: fiberBoostBought is PERMANENT and NOT reset!
+
     setGens(GENERATORS.map(g => ({ id: g.id, count: 0, cost: g.baseCost })));
     soundManager.playPrestige();
     handleSave();
-    setToastMessage(`🚽 SLURP! Du spolade toaletten & nådde Prestige Nivå ${nextLevel}! Permanent ${nextMult}x produktion!`);
-    setTimeout(() => setToastMessage(null), 4000);
-  }, [score, prestigeLevel, handleSave]);
+    setToastMessage(
+      `🚽 SLURP! Du spolade toaletten & nådde Prestige Nivå ${nextLevel}! Permanent ${nextMult}x produktion!${
+        fiberBoostBought ? ' (Permanent Fiber-Boost +15% bevarad!)' : ''
+      }`
+    );
+    setTimeout(() => setToastMessage(null), 4500);
+  }, [score, prestigeLevel, fiberBoostBought, handleSave]);
 
   const handleGoldenCollect = useCallback(
     (type: 'frenzy' | 'instant_points') => {
       if (type === 'frenzy') {
-        setFrenzySecondsLeft(15);
-        setToastMessage('🔥 7x BAJS-RUSCH AKTIVERAD I 15 SEKUNDER! Klicka som en galning!');
+        const frenzyDuration = goldenCornBought ? 20 : 15;
+        setFrenzySecondsLeft(frenzyDuration);
+        setToastMessage(`🔥 7x BAJS-RUSCH AKTIVERAD I ${frenzyDuration} SEKUNDER! Klicka som en galning!`);
       } else {
         // Instant points: 15% of bank or at least 3 minutes of PPS
-        const minReward = Math.max(totalPps * 180, 500);
+        const minReward = Math.max(totalPps * (goldenCornBought ? 240 : 180), 500);
         const reward = Math.max(score * 0.15, minReward);
         setScore(prev => prev + reward);
         setTotalEver(prev => prev + reward);
@@ -458,7 +617,7 @@ export default function App() {
       }
       setTimeout(() => setToastMessage(null), 4000);
     },
-    [score, totalPps]
+    [score, totalPps, goldenCornBought]
   );
 
   const handleCheatDetected = useCallback(() => {
@@ -479,12 +638,44 @@ export default function App() {
 
     setSplashes(newSplashes);
 
-    if (cheatTimerRef.current) clearTimeout(cheatTimerRef.current);
+    if (cheatTimerRef.current) {
+      window.clearTimeout(cheatTimerRef.current);
+    }
+
     cheatTimerRef.current = window.setTimeout(() => {
       setCheatActive(false);
       setSplashes([]);
     }, 4500);
   }, [cheatActive]);
+
+  const handleHardReset = useCallback(() => {
+    try {
+      localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(LEGACY_SAVE_KEY);
+    } catch {
+      // ignore
+    }
+    setScore(0);
+    setTotalEver(0);
+    setTotalClicks(0);
+    setPrestigeMult(1);
+    setPrestigeLevel(0);
+    setLaxUsed(false);
+    setCoffeeBought(false);
+    setHotSauceBought(false);
+    setSoftTpBought(false);
+    setPlungerBought(false);
+    setGoldenCornBought(false);
+    setFiberBoostBought(false);
+    setTotalPlayTimeSeconds(0);
+    setGens(GENERATORS.map(g => ({ id: g.id, count: 0, cost: g.baseCost })));
+    setUnlockedAchievements([]);
+    setActiveSkin('default');
+    setUnlockedSkins(['default']);
+    setActiveModal(null);
+    setToastMessage('🗑️ Spelet har nollställts helt!');
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
 
   const handleExportSave = useCallback(() => {
     const data: GameSaveData = {
@@ -500,6 +691,12 @@ export default function App() {
       unlockedSkins,
       lastSavedTime: Date.now(),
       totalPlayTimeSeconds,
+      coffeeBought,
+      hotSauceBought,
+      softTpBought,
+      plungerBought,
+      goldenCornBought,
+      fiberBoostBought,
     };
     return btoa(unescape(encodeURIComponent(JSON.stringify(data))));
   }, [
@@ -514,57 +711,64 @@ export default function App() {
     activeSkin,
     unlockedSkins,
     totalPlayTimeSeconds,
+    coffeeBought,
+    hotSauceBought,
+    softTpBought,
+    plungerBought,
+    goldenCornBought,
+    fiberBoostBought,
   ]);
 
-  const handleImportSave = useCallback((saveCode: string): boolean => {
+  const handleImportSave = useCallback((encoded: string): boolean => {
     try {
-      const decoded = decodeURIComponent(escape(atob(saveCode)));
+      const decoded = decodeURIComponent(escape(atob(encoded)));
       const data = JSON.parse(decoded);
       if (typeof data.score !== 'number') return false;
 
-      setScore(data.score || 0);
-      setTotalEver(data.totalEver || 0);
-      setTotalClicks(data.totalClicks || 0);
-      setPrestigeMult(data.prestigeMult || 1);
-      setPrestigeLevel(data.prestigeLevel || 0);
+      setScore(Number(data.score) || 0);
+      setTotalEver(Number(data.totalEver) || 0);
+      setTotalClicks(Number(data.totalClicks) || 0);
+      setPrestigeMult(Number(data.prestigeMult) || 1);
+      setPrestigeLevel(Number(data.prestigeLevel) || 0);
       setLaxUsed(Boolean(data.laxUsed));
-      setTotalPlayTimeSeconds(data.totalPlayTimeSeconds || 0);
+      setCoffeeBought(Boolean(data.coffeeBought));
+      setHotSauceBought(Boolean(data.hotSauceBought));
+      setSoftTpBought(Boolean(data.softTpBought));
+      setPlungerBought(Boolean(data.plungerBought));
+      setGoldenCornBought(Boolean(data.goldenCornBought));
+      setFiberBoostBought(Boolean(data.fiberBoostBought));
+      setTotalPlayTimeSeconds(Number(data.totalPlayTimeSeconds) || 0);
 
       if (Array.isArray(data.gens)) {
-        setGens(data.gens);
+        setGens(prev =>
+          prev.map(g => {
+            const saved = data.gens.find((x: GeneratorState) => x.id === g.id);
+            if (saved) {
+              return {
+                id: g.id,
+                count: Number(saved.count) || 0,
+                cost: Number(saved.cost) || g.cost,
+              };
+            }
+            return g;
+          })
+        );
       }
+
       if (Array.isArray(data.unlockedAchievements)) {
         setUnlockedAchievements(data.unlockedAchievements);
       }
-      if (data.activeSkin) {
-        setActiveSkin(data.activeSkin);
-      }
-      if (Array.isArray(data.unlockedSkins)) {
-        setUnlockedSkins(data.unlockedSkins);
-      }
+      if (data.activeSkin) setActiveSkin(data.activeSkin);
+      if (Array.isArray(data.unlockedSkins)) setUnlockedSkins(data.unlockedSkins);
+
       handleSave();
+      setToastMessage('✅ Sparfil har lästs in och sparats!');
+      setTimeout(() => setToastMessage(null), 3000);
       return true;
     } catch {
       return false;
     }
   }, [handleSave]);
-
-  const handleHardReset = useCallback(() => {
-    localStorage.removeItem(SAVE_KEY);
-    localStorage.removeItem(LEGACY_SAVE_KEY);
-    setScore(0);
-    setTotalEver(0);
-    setTotalClicks(0);
-    setPrestigeMult(1);
-    setPrestigeLevel(0);
-    setLaxUsed(false);
-    setTotalPlayTimeSeconds(0);
-    setGens(GENERATORS.map(g => ({ id: g.id, count: 0, cost: g.baseCost })));
-    setUnlockedAchievements([]);
-    setActiveSkin('default');
-    setUnlockedSkins(['default']);
-    setFrenzySecondsLeft(0);
-  }, []);
 
   return (
     <div
@@ -575,11 +779,11 @@ export default function App() {
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div className="fixed top-3 z-50 px-4 py-2 rounded-xl bg-gradient-to-r from-[#2c1d0f] to-[#452a11] border border-[#e29e34] shadow-2xl text-xs sm:text-sm font-bold text-[#ffd880] flex items-center gap-2 animate-bounce">
-          <span>{toastMessage}</span>
+          {toastMessage}
         </div>
       )}
 
-      {/* Header Bar */}
+      {/* Two-row Responsive Header */}
       <Header
         soundEnabled={soundEnabled}
         onToggleSound={() => setSoundEnabled(prev => !prev)}
@@ -596,12 +800,12 @@ export default function App() {
       />
 
       {/* Main Game Container */}
-      <main className="w-full max-w-lg px-4 pb-12 flex flex-col items-center">
+      <main className="w-full max-w-lg mx-auto px-3 sm:px-4 py-2 flex flex-col gap-4">
         {/* Clickable Zone with Mascot, Score and Passive income */}
         <ClickZone
           score={score}
           pps={totalPps}
-          clickGain={clickGain}
+          clickGain={baseClickGain}
           prestigeMult={prestigeMult}
           prestigeLevel={prestigeLevel}
           activeSkinId={activeSkin}
@@ -611,6 +815,8 @@ export default function App() {
           onManualClick={handleManualClick}
           onCheatDetected={handleCheatDetected}
           cheatActive={cheatActive}
+          hotSauceBought={hotSauceBought}
+          plungerBought={plungerBought}
         />
 
         {/* Upgrades & Powerups Section (Persistent React List) */}
@@ -625,15 +831,32 @@ export default function App() {
           sortMode={sortMode}
           onSetSortMode={setSortMode}
           onBuyUpgrade={handleBuyUpgrade}
+          // Boosts
           laxUsed={laxUsed}
           onUseLax={handleUseLax}
+          coffeeBought={coffeeBought}
+          onBuyCoffee={handleBuyCoffee}
+          hotSauceBought={hotSauceBought}
+          onBuyHotSauce={handleBuyHotSauce}
+          softTpBought={softTpBought}
+          onBuySoftTp={handleBuySoftTp}
+          plungerBought={plungerBought}
+          onBuyPlunger={handleBuyPlunger}
+          goldenCornBought={goldenCornBought}
+          onBuyGoldenCorn={handleBuyGoldenCorn}
+          fiberBoostBought={fiberBoostBought}
+          onBuyFiberBoost={handleBuyFiberBoost}
+          // Prestige
           prestigeLevel={prestigeLevel}
           onPrestige={handlePrestige}
         />
       </main>
 
       {/* Random Floating Golden Poop Event */}
-      <GoldenPoop onCollect={handleGoldenCollect} />
+      <GoldenPoop
+        onCollect={handleGoldenCollect}
+        goldenCornBought={goldenCornBought}
+      />
 
       {/* Humorous Autoclicker Splat Overlay */}
       {splashes.map(s => (
@@ -644,7 +867,7 @@ export default function App() {
             top: `${s.top}%`,
             fontSize: `${s.size}px`,
           }}
-          className="fixed pointer-events-none z-40 select-none animate-[splashIn_0.3s_ease-out_forwards]"
+          className="fixed pointer-events-none z-50 select-none animate-[splashIn_0.3s_ease-out_forwards]"
         >
           💩
         </div>

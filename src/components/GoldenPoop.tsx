@@ -3,6 +3,7 @@ import { soundManager } from '../utils/audio';
 
 interface GoldenPoopProps {
   onCollect: (type: 'frenzy' | 'instant_points') => void;
+  goldenCornBought?: boolean;
 }
 
 interface GoldenInstance {
@@ -12,20 +13,24 @@ interface GoldenInstance {
   emoji: string;
 }
 
-export const GoldenPoop: React.FC<GoldenPoopProps> = ({ onCollect }) => {
+export const GoldenPoop: React.FC<GoldenPoopProps> = ({ onCollect, goldenCornBought = false }) => {
   const [activeInstance, setActiveInstance] = useState<GoldenInstance | null>(null);
   const nextSpawnTimeoutRef = useRef<number | null>(null);
 
   const scheduleNextSpawn = () => {
-    // Spawn between 35 and 80 seconds
-    const delay = 35000 + Math.random() * 45000;
+    // Spawn between 35 and 80 seconds normally, or 18 and 40 seconds with golden corn
+    const minDelay = goldenCornBought ? 18000 : 35000;
+    const extraDelay = goldenCornBought ? 22000 : 45000;
+    const delay = minDelay + Math.random() * extraDelay;
     nextSpawnTimeoutRef.current = window.setTimeout(() => {
       spawnGolden();
     }, delay);
   };
 
   const spawnGolden = () => {
-    const emojis = ['✨💩✨', '🧻⭐', '👑💩', '🌟💩🌟'];
+    const emojis = goldenCornBought
+      ? ['✨🌽✨', '👑💩', '🌟💩🌟', '🌽💩']
+      : ['✨💩✨', '🧻⭐', '👑💩', '🌟💩🌟'];
     const selectedEmoji = emojis[Math.floor(Math.random() * emojis.length)];
     const topPct = 15 + Math.random() * 65;
     const direction = Math.random() > 0.5 ? 'left-to-right' : 'right-to-left';
@@ -37,7 +42,8 @@ export const GoldenPoop: React.FC<GoldenPoopProps> = ({ onCollect }) => {
       emoji: selectedEmoji,
     });
 
-    // Despawn after 8.5 seconds if missed
+    // Despawn after 8.5s (or 13.5s with golden corn)
+    const despawnTime = goldenCornBought ? 13500 : 8500;
     setTimeout(() => {
       setActiveInstance(prev => {
         if (prev) {
@@ -46,14 +52,15 @@ export const GoldenPoop: React.FC<GoldenPoopProps> = ({ onCollect }) => {
         }
         return null;
       });
-    }, 8500);
+    }, despawnTime);
   };
 
   useEffect(() => {
-    // First spawn after 20 seconds
+    // First spawn after 10-20 seconds
+    const firstSpawnTime = goldenCornBought ? 10000 : 20000;
     const initialTimer = window.setTimeout(() => {
       spawnGolden();
-    }, 20000);
+    }, firstSpawnTime);
 
     return () => {
       window.clearTimeout(initialTimer);
@@ -61,7 +68,7 @@ export const GoldenPoop: React.FC<GoldenPoopProps> = ({ onCollect }) => {
         window.clearTimeout(nextSpawnTimeoutRef.current);
       }
     };
-  }, []);
+  }, [goldenCornBought]);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();

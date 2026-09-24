@@ -41,7 +41,8 @@ export function effectivePps(def: GeneratorDef, count: number): number {
   return def.basePps * milestoneMultiplier(count);
 }
 
-export function calcBuyAmount(score: number, currentCost: number, count: number, mode: BuyMode): number {
+export function calcBuyAmount(score: number, currentCost: number, count: number, mode: BuyMode, discountMult: number = 1): number {
+  const discountedCost = Math.max(1, Math.floor(currentCost * discountMult));
   if (mode === 1) return 1;
   if (mode === 10) return 10;
   if (mode === 25) return 25;
@@ -54,7 +55,7 @@ export function calcBuyAmount(score: number, currentCost: number, count: number,
   if (mode === 'max') {
     let s = score;
     let cnt = 0;
-    let cost = currentCost;
+    let cost = discountedCost;
     while (s >= cost && cnt < 1000) {
       s -= cost;
       cost = Math.ceil(cost * COST_SCALE);
@@ -65,10 +66,10 @@ export function calcBuyAmount(score: number, currentCost: number, count: number,
   return 1;
 }
 
-export function calcBuyCost(baseCost: number, amount: number): number {
+export function calcBuyCost(baseCost: number, amount: number, discountMult: number = 1): number {
   if (amount <= 0) return 0;
   let total = 0;
-  let cost = baseCost;
+  let cost = Math.max(1, Math.floor(baseCost * discountMult));
   for (let i = 0; i < amount; i++) {
     total += cost;
     cost = Math.ceil(cost * COST_SCALE);
@@ -96,9 +97,11 @@ export function calculateTotalPps(
   gens: GeneratorState[],
   prestigeMult: number,
   achievementBonusPct: number,
-  frenzyMult: number = 1
+  frenzyMult: number = 1,
+  passiveBonusPct: number = 0
 ): number {
   const base = calculateBasePps(gens);
   const achMultiplier = 1 + (achievementBonusPct / 100);
-  return base * prestigeMult * achMultiplier * frenzyMult;
+  const passiveMultiplier = 1 + (passiveBonusPct / 100);
+  return base * prestigeMult * achMultiplier * passiveMultiplier * frenzyMult;
 }

@@ -36,6 +36,13 @@ export interface GameSaveData {
   unlockedSkins: string[];
   lastSavedTime: number;
   totalPlayTimeSeconds: number;
+  // Boosts & Power-ups
+  coffeeBought?: boolean; // +25% passiv produktion (Morgonkaffe)
+  hotSauceBought?: boolean; // 10% chans för 5x kritiska klick (Stark Jalapeño)
+  softTpBought?: boolean; // 10% rabatt på alla byggnader (Dubbellagers Toapapper)
+  plungerBought?: boolean; // Klick ger +2% av nuvarande PPS (Turbo-Vaskrensare)
+  goldenCornBought?: boolean; // Gyllene händelser dubbelt så ofta & +5s längre (Gyllene Majskorn)
+  fiberBoostBought?: boolean; // Permanent +15% passiv produktion (Permanent Fiber-Boost)
 }
 
 export interface Skin {
@@ -53,6 +60,18 @@ export type SortMode = 'default' | 'price' | 'expensive' | 'roi';
 export const COST_SCALE = 1.15;
 export const PRESTIGE_BASE_COST = 10000;
 export const LAX_COST = 10000;
+
+// Boost Upgrade Costs
+export const BOOST_COSTS = {
+  lax: 10000,
+  coffee: 15000, // Morgonkaffe (+25% passiv PPS)
+  hotSauce: 35000, // Stark Jalapeño (10% chans för 5x crit klick)
+  softTp: 50000, // Dubbellagers Toapapper (10% rabatt på byggnader)
+  plunger: 100000, // Turbo-Vaskrensare (+2% av PPS till klickkraft)
+  goldenCorn: 250000, // Gyllene Majskorn (2x gyllene spawn & +5s tid)
+  fiberBoost: 500000, // Permanent Fiber-Boost (+15% passiv produktion permanent)
+};
+
 export const MILESTONES = [25, 50, 75, 100, 125, 150, 175, 200, 250, 300];
 
 /** Progressive cost for next prestige level: Level 0 -> 10k, Level 1 -> 40k, Level 2 -> 160k, Level 3 -> 650k... */

@@ -9,6 +9,7 @@ interface FloatingNumber {
   x: number;
   y: number;
   value: number;
+  isCrit?: boolean;
 }
 
 interface SplashPoop {
@@ -28,9 +29,11 @@ interface ClickZoneProps {
   activeSkinEmoji?: string;
   frenzyActive: boolean;
   frenzySecondsLeft: number;
-  onManualClick: (e?: React.MouseEvent | KeyboardEvent) => void;
+  onManualClick: (e?: React.MouseEvent | KeyboardEvent) => { gained: number; isCrit: boolean };
   onCheatDetected: () => void;
   cheatActive: boolean;
+  hotSauceBought?: boolean;
+  plungerBought?: boolean;
 }
 
 export const ClickZone: React.FC<ClickZoneProps> = ({
@@ -46,6 +49,8 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
   onManualClick,
   onCheatDetected,
   cheatActive,
+  hotSauceBought = false,
+  plungerBought = false,
 }) => {
   const [floatingTexts, setFloatingTexts] = useState<FloatingNumber[]>([]);
   const [isPressing, setIsPressing] = useState(false);
@@ -62,7 +67,7 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
         e.preventDefault();
         checkCheat();
         setIsPressing(true);
-        onManualClick(e);
+        const res = onManualClick(e);
         soundManager.playClick();
         
         // spawn float number near center
@@ -71,7 +76,8 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
           spawnFloatingText(
             rect.left + rect.width / 2 + (Math.random() * 40 - 20),
             rect.top + rect.height / 2 + (Math.random() * 40 - 20),
-            clickGain
+            res?.gained ?? clickGain,
+            res?.isCrit
           );
         }
       }
@@ -110,9 +116,9 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
     }
   };
 
-  const spawnFloatingText = (x: number, y: number, value: number) => {
+  const spawnFloatingText = (x: number, y: number, value: number, isCrit: boolean = false) => {
     const id = ++floatIdRef.current;
-    setFloatingTexts(prev => [...prev.slice(-15), { id, x, y, value }]);
+    setFloatingTexts(prev => [...prev.slice(-15), { id, x, y, value, isCrit }]);
     setTimeout(() => {
       setFloatingTexts(prev => prev.filter(item => item.id !== id));
     }, 850);
@@ -120,9 +126,9 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     checkCheat();
-    onManualClick(e);
+    const res = onManualClick(e);
     soundManager.playClick();
-    spawnFloatingText(e.clientX, e.clientY, clickGain);
+    spawnFloatingText(e.clientX, e.clientY, res?.gained ?? clickGain, res?.isCrit);
   };
 
   return (
@@ -200,8 +206,18 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
       </div>
 
       {/* Click value hint */}
-      <div className="text-xs text-[#8a6e4d] font-medium flex items-center gap-1">
+      <div className="text-xs text-[#8a6e4d] font-medium flex items-center gap-1.5 flex-wrap justify-center">
         <span>+{fmt(clickGain)} sp per klick</span>
+        {plungerBought && (
+          <span className="text-[10px] bg-[#613b14] text-[#ffd699] px-1.5 py-0.5 rounded font-mono font-bold">
+            🪠 +2% PPS
+          </span>
+        )}
+        {hotSauceBought && (
+          <span className="text-[10px] bg-[#611414] text-[#ff9999] px-1.5 py-0.5 rounded font-mono font-bold">
+            🌶️ 10% CRIT
+          </span>
+        )}
         <span className="text-[10px] text-[#6d5438]">(Tips: Tryck Mellanslag)</span>
       </div>
 
@@ -210,9 +226,13 @@ export const ClickZone: React.FC<ClickZoneProps> = ({
         <div
           key={f.id}
           style={{ left: f.x - 24, top: f.y - 20 }}
-          className="fixed pointer-events-none z-50 text-sm font-extrabold text-[#95e050] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] animate-[floatUp_0.85s_ease-out_forwards]"
+          className={`fixed pointer-events-none z-50 font-extrabold animate-[floatUp_0.85s_ease-out_forwards] ${
+            f.isCrit
+              ? 'text-base sm:text-lg text-[#ff4444] scale-125 drop-shadow-[0_0_8px_rgba(255,0,0,0.8)] font-black'
+              : 'text-sm text-[#95e050] drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]'
+          }`}
         >
-          +{fmt(f.value)}
+          {f.isCrit ? '💥 ' : ''}+{fmt(f.value)}
         </div>
       ))}
     </div>
