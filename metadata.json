@@ -1,0 +1,6 @@
+{
+  "name": "Poop Clicker Deluxe",
+  "description": "Ett beroendeframkallande klickerspel med uppgraderingar, milstolpar, prestige, gyllene händelser och offlinesparning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
